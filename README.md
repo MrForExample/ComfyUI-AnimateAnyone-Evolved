@@ -1,9 +1,8 @@
 # ComfyUI-AnimateAnyone-Evolved
  Improved AnimateAnyone implementation that allows you to use the opse image sequence and reference image to generate stylized video.<br>
  ***The current goal of this project is to achieve desired pose2video result with 1+FPS on GPUs that are equal to or better than RTX 3080!🚀***
-<br>
 
-https://github.com/MrForExample/ComfyUI-AnimateAnyone-Evolved/assets/62230687/572eaa8d-6011-42dc-9ac5-9bbd86e4ac9d
+<video controls autoplay loop src="https://github.com/MrForExample/ComfyUI-AnimateAnyone-Evolved/assets/62230687/572eaa8d-6011-42dc-9ac5-9bbd86e4ac9d" muted="false"></video> 
 
 
 ## Currently Support
