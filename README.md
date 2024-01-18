@@ -1,27 +1,29 @@
 # ComfyUI-AnimateAnyone-Evolved
  Improved AnimateAnyone implementation that allows you to use the opse image sequence and reference image to generate stylized video.<br>
  ***The current goal of this project is to achieve desired pose2video result with 1+FPS on GPUs that are equal to or better than RTX 3080!🚀***
+<br>
 
-<br><video controls autoplay loop src="./_Example_Workflow/_Test_Results/Test2Show-ChunLi.mp4" muted="false"></video>
+https://github.com/MrForExample/ComfyUI-AnimateAnyone-Evolved/assets/62230687/572eaa8d-6011-42dc-9ac5-9bbd86e4ac9d
+
 
 ## Currently Support
 - Please check **[example workflows](./_Example_Workflow/)** for usage. You can use [Test Inputs](./_Example_Workflow/_Test_Inputs/) to generate the exactly same results that I showed here. (I got Chun-Li image from [civitai](https://civitai.com/images/3034077))
 - Support different sampler & scheduler:
   - **DDIM**
     - 24 frames pose image sequences, `steps=20`, `context_frames=24`; Takes 835.67 seconds to generate on a RTX3080 GPU
-    <br><video controls autoplay loop src="./_Example_Workflow/_Test_Results/DDIM_context_frame_24.mp4" muted="false" width="320"></video>
-    - 24 frames pose image sequences, `steps=20`, `context_frames=12`; Takes 425.65 seconds to generate on a RTX3080 GPU
-    <br><video controls autoplay loop src="./_Example_Workflow/_Test_Results/DDIM_context_frame_12.mp4" muted="false" width="320"></video>
+    <br><video controls autoplay loop src="https://github.com/MrForExample/ComfyUI-AnimateAnyone-Evolved/assets/62230687/4e5f6b80-88a7-4bf8-9c81-7a00b5a02c76" muted="false" width="320"></video> 
+    - 24 frames pose image sequences, `steps=20`, `context_frames=12`; Takes 425.65 seconds to generate on a RTX3080 GPU  
+    <br><video controls autoplay loop src="https://github.com/MrForExample/ComfyUI-AnimateAnyone-Evolved/assets/62230687/5691ac83-1400-43e2-a930-531d7695e506" muted="false" width="320"></video>
   - **DPM++ 2M Karras**
     - 24 frames pose image sequences, `steps=20`, `context_frames=12`; Takes 407.48 seconds to generate on a RTX3080 GPU
-    <br><video controls autoplay loop src="./_Example_Workflow/_Test_Results/DPM++_2M_Karras_context_frame_12.mp4" muted="false" width="320"></video>
+    <br><video controls autoplay loop src="https://github.com/MrForExample/ComfyUI-AnimateAnyone-Evolved/assets/62230687/45c6aaeb-b750-4d44-8c31-edbdcf1068d8" muted="false" width="320"></video>
   - **LCM**
     - 24 frames pose image sequences, `steps=20`, `context_frames=24`; Takes 606.56 seconds to generate on a RTX3080 GPU
-    <br><video controls autoplay loop src="./_Example_Workflow/_Test_Results/LCM_context_frame_24.mp4" muted="false" width="320"></video>
+    <br><video controls autoplay loop src="https://github.com/MrForExample/ComfyUI-AnimateAnyone-Evolved/assets/62230687/e8c712ec-fc7f-4679-ae41-99449f4f76aa" muted="false" width="320"></video>
     - Note:<br>*Pre-trained LCM Lora for SD1.5 does not working well here, since model is retrained for quite a long time steps from SD1.5 checkpoint, however retain a new lcm lora is feasible*
   - **Euler**
     - 24 frames pose image sequences, `steps=20`, `context_frames=12`; Takes 450.66 seconds to generate on a RTX3080 GPU
-    <br><video controls autoplay loop src="./_Example_Workflow/_Test_Results/Euler_context_frame_12.mp4" muted="false" width="320"></video>
+    <br><video controls autoplay loop src="https://github.com/MrForExample/ComfyUI-AnimateAnyone-Evolved/assets/62230687/6a5b7c28-943d-4ff2-83de-3460ab1a6b61" muted="false" width="320"></video>
   - **Euler Ancestral**
   - **LMS**
   - **PNDM**
