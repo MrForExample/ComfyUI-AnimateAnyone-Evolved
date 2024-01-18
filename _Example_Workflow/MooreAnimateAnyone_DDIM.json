@@ -1,0 +1,984 @@
+{
+  "last_node_id": 26,
+  "last_link_id": 32,
+  "nodes": [
+    {
+      "id": 15,
+      "type": "Reroute",
+      "pos": [
+        1578,
+        -110
+      ],
+      "size": [
+        75,
+        26
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "",
+          "type": "*",
+          "link": 14
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "VAE",
+          "links": [
+            15
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "showOutputText": false,
+        "horizontal": false
+      }
+    },
+    {
+      "id": 14,
+      "type": "VAEDecode",
+      "pos": [
+        2613,
+        -130
+      ],
+      "size": {
+        "0": 210,
+        "1": 46
+      },
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 23
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 15
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            16
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      }
+    },
+    {
+      "id": 11,
+      "type": "[ComfyUI-3D] Load UNet2D ConditionModel",
+      "pos": [
+        1435,
+        195
+      ],
+      "size": {
+        "0": 407.1247863769531,
+        "1": 86.651123046875
+      },
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "unet2d",
+          "type": "UNET2D",
+          "links": [
+            18
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "[ComfyUI-3D] Load UNet2D ConditionModel"
+      },
+      "widgets_values": [
+        "./pretrained_weights/stable-diffusion-v1-5/unet/",
+        "./pretrained_weights/reference_unet.pth"
+      ]
+    },
+    {
+      "id": 12,
+      "type": "[ComfyUI-3D] Load UNet3D ConditionModel",
+      "pos": [
+        1471,
+        358
+      ],
+      "size": {
+        "0": 409.384033203125,
+        "1": 106
+      },
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "unet3d",
+          "type": "UNET3D",
+          "links": [
+            19
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "[ComfyUI-3D] Load UNet3D ConditionModel"
+      },
+      "widgets_values": [
+        "./pretrained_weights/stable-diffusion-v1-5/unet/",
+        "./pretrained_weights/denoising_unet.pth",
+        "./pretrained_weights/motion_module.pth"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "VAEEncode",
+      "pos": [
+        1542,
+        88
+      ],
+      "size": {
+        "0": 210,
+        "1": 46
+      },
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 24
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            20
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEEncode",
+        "ttNbgOverride": {
+          "color": "#223",
+          "bgcolor": "#335",
+          "groupcolor": "#88A"
+        }
+      },
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 7,
+      "type": "[ComfyUI-3D] Load Pose Guider",
+      "pos": [
+        1106,
+        704
+      ],
+      "size": {
+        "0": 366.0615234375,
+        "1": 58
+      },
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "pose_guider",
+          "type": "POSE_GUIDER",
+          "links": [
+            5
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "[ComfyUI-3D] Load Pose Guider"
+      },
+      "widgets_values": [
+        "./pretrained_weights/pose_guider.pth"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "[ComfyUI-3D] Pose Guider Encode",
+      "pos": [
+        1668,
+        704
+      ],
+      "size": {
+        "0": 292.20001220703125,
+        "1": 46
+      },
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pose_guider",
+          "type": "POSE_GUIDER",
+          "link": 5
+        },
+        {
+          "name": "pose_images",
+          "type": "IMAGE",
+          "link": 27
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pose_latent",
+          "type": "POSE_LATENT",
+          "links": [
+            22
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "[ComfyUI-3D] Pose Guider Encode"
+      }
+    },
+    {
+      "id": 6,
+      "type": "CLIPVisionLoader",
+      "pos": [
+        1026,
+        591
+      ],
+      "size": {
+        "0": 315,
+        "1": 58
+      },
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "CLIP_VISION",
+          "type": "CLIP_VISION",
+          "links": [
+            3
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPVisionLoader"
+      },
+      "widgets_values": [
+        "pytorch_model.bin"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "CLIPVisionEncode",
+      "pos": [
+        1544,
+        592
+      ],
+      "size": {
+        "0": 380.4000244140625,
+        "1": 46
+      },
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip_vision",
+          "type": "CLIP_VISION",
+          "link": 3
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 25
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CLIP_VISION_OUTPUT",
+          "type": "CLIP_VISION_OUTPUT",
+          "links": [
+            21
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPVisionEncode"
+      }
+    },
+    {
+      "id": 4,
+      "type": "LoadImage",
+      "pos": [
+        1,
+        266
+      ],
+      "size": {
+        "0": 315,
+        "1": 314
+      },
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            26
+          ],
+          "shape": 3,
+          "slot_index": 0
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "Test_ChunLi 768X512.png",
+        "image"
+      ]
+    },
+    {
+      "id": 25,
+      "type": "INTConstant",
+      "pos": [
+        437,
+        506
+      ],
+      "size": {
+        "0": 210,
+        "1": 58
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "value",
+          "type": "INT",
+          "links": [
+            30,
+            32
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "title": "Input Image Width",
+      "properties": {
+        "Node name for S&R": "INTConstant"
+      },
+      "widgets_values": [
+        512
+      ],
+      "bgcolor": "#29699c"
+    },
+    {
+      "id": 26,
+      "type": "INTConstant",
+      "pos": [
+        387,
+        387
+      ],
+      "size": {
+        "0": 210,
+        "1": 58
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "value",
+          "type": "INT",
+          "links": [
+            29,
+            31
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "title": "Input Image Height",
+      "properties": {
+        "Node name for S&R": "INTConstant"
+      },
+      "widgets_values": [
+        768
+      ],
+      "bgcolor": "#29699c"
+    },
+    {
+      "id": 1,
+      "type": "VAELoader",
+      "pos": [
+        854,
+        106
+      ],
+      "size": {
+        "0": 493.68145751953125,
+        "1": 60.091087341308594
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            1,
+            14
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "title": "Load VAE [Var] [Order: 8]",
+      "properties": {
+        "Node name for S&R": "VAELoader"
+      },
+      "widgets_values": [
+        "diffusion_pytorch_model.bin"
+      ],
+      "color": "#332922",
+      "bgcolor": "#593930"
+    },
+    {
+      "id": 22,
+      "type": "ImageScale",
+      "pos": [
+        835,
+        265
+      ],
+      "size": {
+        "0": 436.79998779296875,
+        "1": 125.30488586425781
+      },
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 26
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "link": 29,
+          "widget": {
+            "name": "height"
+          }
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "link": 30,
+          "widget": {
+            "name": "width"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            24,
+            25
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "title": "Upscale Image (Model Is Trained with 768X512 images)",
+      "properties": {
+        "Node name for S&R": "ImageScale"
+      },
+      "widgets_values": [
+        "nearest-exact",
+        768,
+        512,
+        "disabled"
+      ]
+    },
+    {
+      "id": 23,
+      "type": "ImageScale",
+      "pos": [
+        1026,
+        848
+      ],
+      "size": {
+        "0": 436.79998779296875,
+        "1": 131.56387329101562
+      },
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 28
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "link": 31,
+          "widget": {
+            "name": "height"
+          }
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "link": 32,
+          "widget": {
+            "name": "width"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            27
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "title": "Upscale Image (Model Is Trained with 768X512 images)",
+      "properties": {
+        "Node name for S&R": "ImageScale"
+      },
+      "widgets_values": [
+        "nearest-exact",
+        768,
+        512,
+        "disabled"
+      ]
+    },
+    {
+      "id": 16,
+      "type": "VHS_VideoCombine",
+      "pos": [
+        2986,
+        -130
+      ],
+      "size": [
+        315,
+        701.5
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 16
+        },
+        {
+          "name": "audio",
+          "type": "VHS_AUDIO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Filenames",
+          "type": "VHS_FILENAMES",
+          "links": null,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VHS_VideoCombine"
+      },
+      "widgets_values": {
+        "frame_rate": 12,
+        "loop_count": 0,
+        "filename_prefix": "AnimateAnyone/video",
+        "format": "video/h265-mp4",
+        "pix_fmt": "yuv420p10le",
+        "crf": 22,
+        "save_metadata": true,
+        "pingpong": false,
+        "save_output": true,
+        "videopreview": {
+          "hidden": false,
+          "paused": false,
+          "params": {
+            "filename": "video_00019.mp4",
+            "subfolder": "AnimateAnyone",
+            "type": "output",
+            "format": "video/h265-mp4"
+          }
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "[ComfyUI-3D] Animate Anyone Sampler",
+      "pos": [
+        2159,
+        48
+      ],
+      "size": {
+        "0": 328.86407470703125,
+        "1": 594
+      },
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "reference_unet",
+          "type": "UNET2D",
+          "link": 18
+        },
+        {
+          "name": "denoising_unet",
+          "type": "UNET3D",
+          "link": 19
+        },
+        {
+          "name": "ref_image_latent",
+          "type": "LATENT",
+          "link": 20
+        },
+        {
+          "name": "clip_image_embeds",
+          "type": "CLIP_VISION_OUTPUT",
+          "link": 21
+        },
+        {
+          "name": "pose_latent",
+          "type": "POSE_LATENT",
+          "link": 22
+        }
+      ],
+      "outputs": [
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "links": [
+            23
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "[ComfyUI-3D] Animate Anyone Sampler"
+      },
+      "widgets_values": [
+        999999999,
+        "fixed",
+        20,
+        3.5,
+        24,
+        1,
+        4,
+        1,
+        1,
+        "DDIM",
+        0.0008500000000000001,
+        0.012,
+        "linear",
+        "v_prediction",
+        "trailing",
+        1,
+        false,
+        "cammy_white_v1.safetensors",
+        false,
+        "lcm-lora-sdv1-5.safetensors"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "VHS_LoadVideo",
+      "pos": [
+        37,
+        647
+      ],
+      "size": [
+        235.1999969482422,
+        553.7999954223633
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            28
+          ],
+          "shape": 3,
+          "slot_index": 0
+        },
+        {
+          "name": "frame_count",
+          "type": "INT",
+          "links": null,
+          "shape": 3
+        },
+        {
+          "name": "audio",
+          "type": "VHS_AUDIO",
+          "links": null,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VHS_LoadVideo"
+      },
+      "widgets_values": {
+        "video": "anyone-video-2_kps.mp4",
+        "force_rate": 0,
+        "force_size": "Disabled",
+        "custom_width": 512,
+        "custom_height": 512,
+        "frame_load_cap": 96,
+        "skip_first_frames": 0,
+        "select_every_nth": 1,
+        "choose video to upload": "image",
+        "videopreview": {
+          "hidden": false,
+          "paused": false,
+          "params": {
+            "frame_load_cap": 96,
+            "skip_first_frames": 0,
+            "force_rate": 0,
+            "filename": "anyone-video-2_kps.mp4",
+            "type": "input",
+            "format": "video/mp4",
+            "select_every_nth": 1
+          }
+        }
+      }
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      2,
+      1,
+      "VAE"
+    ],
+    [
+      3,
+      6,
+      0,
+      5,
+      0,
+      "CLIP_VISION"
+    ],
+    [
+      5,
+      7,
+      0,
+      8,
+      0,
+      "POSE_GUIDER"
+    ],
+    [
+      14,
+      1,
+      0,
+      15,
+      0,
+      "*"
+    ],
+    [
+      15,
+      15,
+      0,
+      14,
+      1,
+      "VAE"
+    ],
+    [
+      16,
+      14,
+      0,
+      16,
+      0,
+      "IMAGE"
+    ],
+    [
+      18,
+      11,
+      0,
+      21,
+      0,
+      "UNET2D"
+    ],
+    [
+      19,
+      12,
+      0,
+      21,
+      1,
+      "UNET3D"
+    ],
+    [
+      20,
+      2,
+      0,
+      21,
+      2,
+      "LATENT"
+    ],
+    [
+      21,
+      5,
+      0,
+      21,
+      3,
+      "CLIP_VISION_OUTPUT"
+    ],
+    [
+      22,
+      8,
+      0,
+      21,
+      4,
+      "POSE_LATENT"
+    ],
+    [
+      23,
+      21,
+      0,
+      14,
+      0,
+      "LATENT"
+    ],
+    [
+      24,
+      22,
+      0,
+      2,
+      0,
+      "IMAGE"
+    ],
+    [
+      25,
+      22,
+      0,
+      5,
+      1,
+      "IMAGE"
+    ],
+    [
+      26,
+      4,
+      0,
+      22,
+      0,
+      "IMAGE"
+    ],
+    [
+      27,
+      23,
+      0,
+      8,
+      1,
+      "IMAGE"
+    ],
+    [
+      28,
+      10,
+      0,
+      23,
+      0,
+      "IMAGE"
+    ],
+    [
+      29,
+      26,
+      0,
+      22,
+      1,
+      "INT"
+    ],
+    [
+      30,
+      25,
+      0,
+      22,
+      2,
+      "INT"
+    ],
+    [
+      31,
+      26,
+      0,
+      23,
+      1,
+      "INT"
+    ],
+    [
+      32,
+      25,
+      0,
+      23,
+      2,
+      "INT"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {},
+  "version": 0.4
+}
