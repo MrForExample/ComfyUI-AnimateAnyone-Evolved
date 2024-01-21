@@ -172,30 +172,44 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
 
         return new_latents
     
+    def calculate_residual_noise(self, t, latents, pred_original_sample):
+        # compute the residual empty/negative condition noise sample
+        alpha_prod_t = self.scheduler.alphas_cumprod[t].to(latents.device)
+        beta_prod_t = 1 - alpha_prod_t
+        
+        if self.scheduler.config.prediction_type == "epsilon":
+            # "predicted x_0" of formula (12) from https://arxiv.org/pdf/2010.02502.pdf
+            # rearranged from formular: pred_original_sample = (latents - beta_prod_t ** (0.5) * noise_pred) / alpha_prod_t ** (0.5)
+            noise_pred_uncond_prev = (latents - alpha_prod_t ** (0.5) * pred_original_sample) / beta_prod_t ** (0.5)
+            
+        elif self.scheduler.config.prediction_type == "v_prediction":
+            # v_prediction: (see section 2.4 of [Imagen Video](https://imagen.research.google/video/paper.pdf)
+            # rearranged from formular: pred_original_sample = (alpha_prod_t ** (0.5) * latents - (beta_prod_t ** (0.5) * noise_pred
+            noise_pred_uncond_prev = (alpha_prod_t ** (0.5) * latents - pred_original_sample) / beta_prod_t ** (0.5)
+            
+        return noise_pred_uncond_prev
+    
     def perform_guidance(
         self, 
         noise_pred,
         counter,
         cfg,
         delta,
-        do_classifier_free_guidance,
         do_double_pass,
-        do_rcfg,
         noise_pred_uncond_prev=None,
         ):
         
-        # perform CFG/RCFG guidance
-        if do_classifier_free_guidance:
-            if do_double_pass:
-                noise_pred_uncond, noise_pred_cond = (noise_pred / counter).chunk(2)
-            elif noise_pred_uncond_prev is not None:
-                noise_pred_cond = noise_pred / counter
-                noise_pred_uncond = noise_pred_uncond_prev
-            else:
-                noise_pred_cond = noise_pred_uncond = noise_pred / counter
-                cfg = 0.0
-            # RCFG of formula (7) from https://arxiv.org/pdf/2312.12491.pdf
-            noise_pred = delta * noise_pred_uncond + cfg * (noise_pred_cond - delta * noise_pred_uncond)
+        # perform guidance
+        if do_double_pass: # CFG
+            noise_pred_uncond, noise_pred_cond = (noise_pred / counter).chunk(2)
+        elif noise_pred_uncond_prev is not None:    # RCFG
+            noise_pred_cond = noise_pred / counter
+            noise_pred_uncond = noise_pred_uncond_prev
+        else:   # Direct
+            noise_pred_cond = noise_pred_uncond = noise_pred / counter
+            cfg = 0.0
+        # RCFG of formula (7) from https://arxiv.org/pdf/2312.12491.pdf
+        noise_pred = delta * noise_pred_uncond + cfg * (noise_pred_cond - delta * noise_pred_uncond)
 
         return noise_pred
     
@@ -207,19 +221,18 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
         pose_latent, 
         global_context, 
         do_double_pass,
-        device,
     ):
         noise_pred = torch.zeros(
             (
                 latents.shape[0] * (2 if do_double_pass else 1),
                 *latents.shape[1:],
             ),
-            device=device,
+            device=latents.device,
             dtype=latents.dtype,
         )
         counter = torch.zeros(
             (1, 1, latents.shape[2], 1, 1),
-            device=device,
+            device=latents.device,
             dtype=latents.dtype,
         )
 
@@ -227,7 +240,7 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
             # 3.1 expand the latents if we are doing classifier free guidance
             latent_model_input = (
                 torch.cat([latents[:, :, c] for c in context]) # Concatenates the context in the same batch
-                .to(device)
+                .to(latents.device)
                 .repeat(2 if do_double_pass else 1, 1, 1, 1, 1)
             )
             latent_model_input = self.scheduler.scale_model_input(
@@ -260,11 +273,9 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
         global_context, 
         cfg,
         delta,
-        do_classifier_free_guidance,
         do_double_pass,
         do_rcfg,
         noise_pred_uncond_prev,
-        device,
         extra_step_kwargs,
     ):
         
@@ -275,35 +286,20 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
             pose_latent, 
             global_context, 
             do_double_pass,
-            device,
         )
         noise_pred = self.perform_guidance(
             noise_pred,
             counter,
             cfg,
             delta,
-            do_classifier_free_guidance,
             do_double_pass,
             noise_pred_uncond_prev,
         )
   
         scheduler_output = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs)
-        pred_original_sample = scheduler_output.pred_original_sample
         
-        # compute the residual empty/negative condition noise sample
         if do_rcfg:
-            alpha_prod_t = self.scheduler.alphas_cumprod[t].to(device)
-            beta_prod_t = 1 - alpha_prod_t
-            # Seems following two methods both worked for prediction_type == "v_prediction"
-            if self.scheduler.config.prediction_type == "epsilon":
-                # "predicted x_0" of formula (12) from https://arxiv.org/pdf/2010.02502.pdf
-                # rearranged from formular: pred_original_sample = (latents - beta_prod_t ** (0.5) * noise_pred) / alpha_prod_t ** (0.5)
-                noise_pred_uncond_prev = (latents - alpha_prod_t ** (0.5) * pred_original_sample) / beta_prod_t ** (0.5)
-                
-            elif self.scheduler.config.prediction_type == "v_prediction":
-                # v_prediction: (see section 2.4 of [Imagen Video](https://imagen.research.google/video/paper.pdf)
-                # rearranged from formular: pred_original_sample = (alpha_prod_t ** (0.5) * latents - (beta_prod_t ** (0.5) * noise_pred
-                noise_pred_uncond_prev = (alpha_prod_t ** (0.5) * latents - pred_original_sample) / beta_prod_t ** (0.5)
+            noise_pred_uncond_prev = self.calculate_residual_noise(t, latents, scheduler_output.pred_original_sample)
             
         return scheduler_output.prev_sample, noise_pred_uncond_prev
 
@@ -436,16 +432,14 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
                     _, self.noise_pred_uncond_prev = self.solve_one_step(
                         t, 
                         latents, 
-                        uncond_encoder_hidden_states,
+                        encoder_hidden_states,
                         pose_latent, 
                         global_context, 
                         cfg,
                         delta,
-                        do_classifier_free_guidance,
                         do_double_pass,
-                        i+1 == steps_uncond, #do_rcfg,
+                        i+1 == steps_uncond,
                         self.noise_pred_uncond_prev,
-                        device,
                         extra_step_kwargs,
                     )
                     
@@ -453,9 +447,6 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
             
             reference_control_writer.clear()
             reference_control_reader.clear()
-            
-            #if hasattr(self.scheduler, "_step_index"):
-            #    self.scheduler._step_index = 0
             
         self.reference_unet(
             ref_image_latent.repeat(2 if do_double_pass else 1, 1, 1, 1),
@@ -482,11 +473,9 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
                     global_context, 
                     cfg,
                     delta,
-                    do_classifier_free_guidance,
                     do_double_pass,
                     do_rcfg,
                     self.noise_pred_uncond_prev,
-                    device,
                     extra_step_kwargs,
                 )
 
