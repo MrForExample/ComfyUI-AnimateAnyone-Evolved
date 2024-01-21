@@ -41,6 +41,7 @@ SCHEDULER_DICT = OrderedDict([
 ])
 
 class Animate_Anyone_Sampler:
+    
     @classmethod
     def INPUT_TYPES(s):
         return {
@@ -115,41 +116,12 @@ class Animate_Anyone_Sampler:
     ):
         
         latent_format = latent_formats.SD15()
-        do_classifier_free_guidance = cfg > 0
         
         # encoder_hidden_states.shape: torch.Size([1, 1, 768]) clip_image_embeds.shape: torch.Size([1, 768])
         encoder_hidden_states = clip_image_embeds["image_embeds"].unsqueeze(1).to(DEVICE, dtype=WEIGHT_DETYPE)
 
-        if do_classifier_free_guidance:
-            uncond_encoder_hidden_states = torch.zeros_like(encoder_hidden_states)
-            encoder_hidden_states = torch.cat(
-                [uncond_encoder_hidden_states, encoder_hidden_states], dim=0
-            )
-
-        reference_control_writer = ReferenceAttentionControl(
-            reference_unet,
-            do_classifier_free_guidance=do_classifier_free_guidance,
-            mode="write",
-            fusion_blocks="full",
-        )
-        reference_control_reader = ReferenceAttentionControl(
-            denoising_unet,
-            do_classifier_free_guidance=do_classifier_free_guidance,
-            mode="read",
-            fusion_blocks="full",
-        )
-        
         # forward reference image latent with shape (1, 4, 96, 64) to reference net
         ref_image_latent = latent_format.process_in(ref_image_latent["samples"]).to(DEVICE, dtype=WEIGHT_DETYPE)
-        reference_unet(
-            ref_image_latent.repeat(
-                (2 if do_classifier_free_guidance else 1), 1, 1, 1
-            ),
-            torch.zeros(size=(1,), dtype=int, device=DEVICE),
-            encoder_hidden_states=encoder_hidden_states,
-            return_dict=False,
-        )
-        reference_control_reader.update(reference_control_writer)
         
         # setup scheduler from user inputs
         scheduler_class = SCHEDULER_DICT[sampler_scheduler_pairs]
@@ -171,7 +143,7 @@ class Animate_Anyone_Sampler:
         scheduler = scheduler_class(**sched_kwargs)
         
         # setup diffuser and then denoise
-        diffuser = AADiffusion(denoising_unet, scheduler)
+        diffuser = AADiffusion(reference_unet, denoising_unet, scheduler)
         
         if use_lora:
             lora_path = comfy_paths.get_full_path("loras", lora_name)
@@ -183,7 +155,7 @@ class Animate_Anyone_Sampler:
             delta,
             ref_image_latent,
             pose_latent, 
-            encoder_hidden_states, 
+            encoder_hidden_states,
             seed,
             context_frames=context_frames,
             context_stride=context_stride,
@@ -195,9 +167,6 @@ class Animate_Anyone_Sampler:
         
         # (1, 4, f, h, w) -> (f, 4, h, w)
         samples = torch.squeeze(samples, 0).permute(1, 0, 2, 3)
-        
-        reference_control_reader.clear()
-        reference_control_writer.clear()
         
         return ({"samples":samples}, )
 
