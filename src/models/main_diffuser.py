@@ -3,8 +3,10 @@ import inspect
 import math
 from typing import Callable, List, Optional, Union
 
+import comfy.utils
+
 import torch
-from diffusers import DiffusionPipeline
+from diffusers import DiffusionPipeline, StableDiffusionPipeline
 from diffusers.loaders import LoraLoaderMixin
 from diffusers.schedulers import (
     DDIMScheduler,
@@ -18,11 +20,11 @@ from diffusers.schedulers import (
 from diffusers.utils.torch_utils import randn_tensor
 
 from ..utils.util import get_tensor_interpolation_method, get_context_scheduler
-
     
 class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
     def __init__(
         self, 
+        reference_unet,
         unet,
         scheduler: Union[
             DDIMScheduler,
@@ -36,9 +38,11 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
     ):
         super().__init__()
         self.register_modules(
+            reference_unet=reference_unet,
             unet=unet,
             scheduler=scheduler,
         )
+        self.reference_unet = reference_unet
         self.unet = unet
         self.scheduler = scheduler
         
@@ -160,13 +164,199 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
         new_index += 1
 
         return new_latents
+    
+    def perform_guidance(
+        self, 
+        noise_pred,
+        counter,
+        cfg,
+        delta,
+        do_double_pass,
+    ):
+        
+        # perform CFG
+        if do_double_pass:
+            noise_pred_uncond, noise_pred_cond = (noise_pred / counter).chunk(2)
+        else:
+            noise_pred_cond = noise_pred_uncond = noise_pred / counter
+            cfg = 0.0
+        noise_pred = delta * noise_pred_uncond + cfg * (noise_pred_cond - delta * noise_pred_uncond)
+
+        return noise_pred
+    
+    def denoise_all_one_step(
+        self, 
+        t, 
+        latents, 
+        encoder_hidden_states,
+        pose_latent, 
+        global_context, 
+        do_double_pass,
+        device,
+    ):
+        noise_pred = torch.zeros(
+            (
+                latents.shape[0] * (2 if do_double_pass else 1),
+                *latents.shape[1:],
+            ),
+            device=device,
+            dtype=latents.dtype,
+        )
+        counter = torch.zeros(
+            (1, 1, latents.shape[2], 1, 1),
+            device=device,
+            dtype=latents.dtype,
+        )
+
+        for context in global_context:
+            # 3.1 expand the latents if we are doing classifier free guidance
+            latent_model_input = (
+                torch.cat([latents[:, :, c] for c in context]) # Concatenates the context in the same batch
+                .to(device)
+                .repeat(2 if do_double_pass else 1, 1, 1, 1, 1)
+            )
+            latent_model_input = self.scheduler.scale_model_input(
+                latent_model_input, t
+            )
+            b, c, f, h, w = latent_model_input.shape
+            latent_pose_input = torch.cat(
+                [pose_latent[:, :, c] for c in context]
+            ).repeat(2 if do_double_pass else 1, 1, 1, 1, 1)
+            pred = self.unet(
+                latent_model_input,     # torch.Size([2, 4, 24, 96, 64])
+                t,
+                encoder_hidden_states=encoder_hidden_states[:b],
+                pose_cond_fea=latent_pose_input,    # torch.Size([2, 320, 24, 96, 64])
+                return_dict=False,
+            )[0]
+
+            for j, c in enumerate(context):
+                noise_pred[:, :, c] = noise_pred[:, :, c] + pred
+                counter[:, :, c] = counter[:, :, c] + 1
+                
+        return noise_pred, counter
+        
+    def solve_one_step(
+        self,
+        t, 
+        latents, 
+        encoder_hidden_states,
+        pose_latent, 
+        global_context, 
+        cfg,
+        delta,
+        do_double_pass,
+        device,
+        extra_step_kwargs,
+    ):
+        
+        noise_pred, counter = self.denoise_all_one_step(
+            t=t, 
+            latents=latents, 
+            encoder_hidden_states=encoder_hidden_states,
+            pose_latent=pose_latent, 
+            global_context=global_context, 
+            do_double_pass=do_double_pass,
+            device=device,
+        )
+        
+        noise_pred = self.perform_guidance(
+            noise_pred=noise_pred,
+            counter=counter,
+            cfg=cfg,
+            delta=delta,
+            do_double_pass=do_double_pass,
+        )
+  
+        scheduler_output = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs)
+            
+        return scheduler_output.prev_sample
+    
+    def denoise_loop(
+        self,
+        ref_image_latent,
+        loop_steps,
+        latents, 
+        encoder_hidden_states,
+        pose_latent, 
+        global_context, 
+        cfg,
+        delta,
+        do_double_pass,
+        interpolation_factor,
+        device,
+        extra_step_kwargs,
+    ):
+        # Prepare confitional embeds
+        if do_double_pass:
+            uncond_encoder_hidden_states = torch.zeros_like(encoder_hidden_states)
+            encoder_hidden_states=torch.cat(
+                    [uncond_encoder_hidden_states, encoder_hidden_states], dim=0
+                )
+        
+        # Prepare reference attention control
+        reference_control_writer = ReferenceAttentionControl(
+            self.reference_unet,
+            do_classifier_free_guidance=do_double_pass,
+            mode="write",
+            fusion_blocks="full",
+        )
+        reference_control_reader = ReferenceAttentionControl(
+            self.unet,
+            do_classifier_free_guidance=do_double_pass,
+            mode="read",
+            fusion_blocks="full",
+        )
+        
+        self.reference_unet(
+            ref_image_latent.repeat(2 if do_double_pass else 1, 1, 1, 1),
+            torch.zeros(size=(1,), dtype=int, device=device),
+            encoder_hidden_states=encoder_hidden_states,
+            return_dict=False,
+        )
+        reference_control_reader.update(reference_control_writer)
+        
+        # Prepare timesteps
+        self.scheduler.set_timesteps(loop_steps, device=device)
+        timesteps = self.scheduler.timesteps
+        
+        comfy_pbar = comfy.utils.ProgressBar(loop_steps)
+        
+        with self.progress_bar(total=loop_steps) as progress_bar:
+            for i, t in enumerate(timesteps):
+
+                latents = self.solve_one_step(
+                    t=t, 
+                    latents=latents, 
+                    encoder_hidden_states=encoder_hidden_states,
+                    pose_latent=pose_latent, 
+                    global_context=global_context, 
+                    cfg=cfg,
+                    delta=delta,
+                    do_double_pass=do_double_pass,
+                    device=device,
+                    extra_step_kwargs=extra_step_kwargs,
+                )
+
+                progress_bar.update()
+                comfy_pbar.update_absolute(i + 1)
+
+        if interpolation_factor > 0:
+            latents = self.interpolate_latents(latents, interpolation_factor, device)
+            
+        reference_control_reader.clear()
+        reference_control_writer.clear()
+        
+        return latents
 
     @torch.no_grad()
     def __call__(
         self,
         steps,
         cfg,
-        pose_fea,
+        delta,
+        ref_image_latent,
+        pose_latent,
         encoder_hidden_states,
         seed = 999999999,
         eta: float = 0.0,
@@ -180,8 +370,9 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
         callback_steps: Optional[int] = 1,
     ):
 
-        device = pose_fea.device
-        
+        do_double_pass = cfg > 0
+
+        device = pose_latent.device
         generator=torch.manual_seed(seed)
         latents = self.prepare_latents(
             batch_size=pose_fea.shape[0],
@@ -239,74 +430,33 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
             [[60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]]
         ]
         """
-
-        do_classifier_free_guidance = cfg > 0
         
-        # denoising loop
-        num_warmup_steps = len(timesteps) - steps * self.scheduler.order
-        with self.progress_bar(total=steps) as progress_bar:
-            for i, t in enumerate(timesteps):
-                noise_pred = torch.zeros(
-                    (
-                        latents.shape[0] * (2 if do_classifier_free_guidance else 1),
-                        *latents.shape[1:],
-                    ),
-                    device=device,
-                    dtype=latents.dtype,
-                )
-                counter = torch.zeros(
-                    (1, 1, latents.shape[2], 1, 1),
-                    device=device,
-                    dtype=latents.dtype,
-                )
-
-                for context in global_context:
-                    # 3.1 expand the latents if we are doing classifier free guidance
-                    latent_model_input = (
-                        torch.cat([latents[:, :, c] for c in context]) # Concatenates the context in the same batch
-                        .to(device)
-                        .repeat(2 if do_classifier_free_guidance else 1, 1, 1, 1, 1)
-                    )
-                    latent_model_input = self.scheduler.scale_model_input(
-                        latent_model_input, t
-                    )
-                    b, c, f, h, w = latent_model_input.shape
-                    latent_pose_input = torch.cat(
-                        [pose_fea[:, :, c] for c in context]
-                    ).repeat(2 if do_classifier_free_guidance else 1, 1, 1, 1, 1)
-                    pred = self.unet(
-                        latent_model_input,     # torch.Size([2, 4, 24, 96, 64])
-                        t,
-                        encoder_hidden_states=encoder_hidden_states[:b],
-                        pose_cond_fea=latent_pose_input,    # torch.Size([2, 320, 24, 96, 64])
-                        return_dict=False,
-                    )[0]
-
-                    for j, c in enumerate(context):
-                        noise_pred[:, :, c] = noise_pred[:, :, c] + pred
-                        counter[:, :, c] = counter[:, :, c] + 1
-
-                # perform guidance
-                if do_classifier_free_guidance:
-                    noise_pred_uncond, noise_pred_text = (noise_pred / counter).chunk(2)
-                    noise_pred = noise_pred_uncond + cfg * (
-                        noise_pred_text - noise_pred_uncond
-                    )
-
-                latents = self.scheduler.step(
-                    noise_pred, t, latents, **extra_step_kwargs
-                ).prev_sample
-                
-                # update progress bar and callback
-                if i == len(timesteps) - 1 or (
-                    (i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0
-                ):
-                    progress_bar.update()
-                    if callback is not None and i % callback_steps == 0:
-                        step_idx = i // getattr(self.scheduler, "order", 1)
-                        callback(step_idx, t, latents)
-
-        if interpolation_factor > 0:
-            latents = self.interpolate_latents(latents, interpolation_factor, device)
+        # Prepare initial latents
+        latents = self.prepare_latents(
+            batch_size=pose_latent.shape[0],
+            num_channels_latents=self.unet.config.in_channels,
+            video_length=video_length,
+            height=pose_latent.shape[-2],
+            width=pose_latent.shape[-1],
+            dtype=encoder_hidden_states.dtype,
+            device=device,
+            generator=generator,
+        )
+        
+        # sequential double pass
+        latents = self.denoise_loop(
+            ref_image_latent=ref_image_latent,
+            loop_steps=steps,
+            latents=latents,
+            encoder_hidden_states=encoder_hidden_states,
+            pose_latent=pose_latent,
+            global_context=global_context,
+            cfg=cfg,
+            delta=delta,
+            do_double_pass=do_double_pass,
+            interpolation_factor=interpolation_factor,
+            device=device,
+            extra_step_kwargs=extra_step_kwargs,
+        )
 
         return latents

@@ -1,6 +1,6 @@
 {
-  "last_node_id": 26,
-  "last_link_id": 32,
+  "last_node_id": 31,
+  "last_link_id": 56,
   "nodes": [
     {
       "id": 15,
@@ -56,7 +56,7 @@
         {
           "name": "samples",
           "type": "LATENT",
-          "link": 23
+          "link": 56
         },
         {
           "name": "vae",
@@ -80,121 +80,6 @@
       }
     },
     {
-      "id": 11,
-      "type": "[ComfyUI-3D] Load UNet2D ConditionModel",
-      "pos": [
-        1435,
-        195
-      ],
-      "size": {
-        "0": 407.1247863769531,
-        "1": 86.651123046875
-      },
-      "flags": {},
-      "order": 0,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "unet2d",
-          "type": "UNET2D",
-          "links": [
-            18
-          ],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "[ComfyUI-3D] Load UNet2D ConditionModel"
-      },
-      "widgets_values": [
-        "./pretrained_weights/stable-diffusion-v1-5/unet/",
-        "./pretrained_weights/reference_unet.pth"
-      ]
-    },
-    {
-      "id": 12,
-      "type": "[ComfyUI-3D] Load UNet3D ConditionModel",
-      "pos": [
-        1471,
-        358
-      ],
-      "size": {
-        "0": 409.384033203125,
-        "1": 106
-      },
-      "flags": {},
-      "order": 1,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "unet3d",
-          "type": "UNET3D",
-          "links": [
-            19
-          ],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "[ComfyUI-3D] Load UNet3D ConditionModel"
-      },
-      "widgets_values": [
-        "./pretrained_weights/stable-diffusion-v1-5/unet/",
-        "./pretrained_weights/denoising_unet.pth",
-        "./pretrained_weights/motion_module.pth"
-      ]
-    },
-    {
-      "id": 2,
-      "type": "VAEEncode",
-      "pos": [
-        1542,
-        88
-      ],
-      "size": {
-        "0": 210,
-        "1": 46
-      },
-      "flags": {},
-      "order": 12,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "pixels",
-          "type": "IMAGE",
-          "link": 24
-        },
-        {
-          "name": "vae",
-          "type": "VAE",
-          "link": 1
-        }
-      ],
-      "outputs": [
-        {
-          "name": "LATENT",
-          "type": "LATENT",
-          "links": [
-            20
-          ],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "VAEEncode",
-        "ttNbgOverride": {
-          "color": "#223",
-          "bgcolor": "#335",
-          "groupcolor": "#88A"
-        }
-      },
-      "color": "#223",
-      "bgcolor": "#335"
-    },
-    {
       "id": 7,
       "type": "[ComfyUI-3D] Load Pose Guider",
       "pos": [
@@ -206,7 +91,7 @@
         "1": 58
       },
       "flags": {},
-      "order": 2,
+      "order": 0,
       "mode": 0,
       "outputs": [
         {
@@ -227,47 +112,6 @@
       ]
     },
     {
-      "id": 8,
-      "type": "[ComfyUI-3D] Pose Guider Encode",
-      "pos": [
-        1668,
-        704
-      ],
-      "size": {
-        "0": 292.20001220703125,
-        "1": 46
-      },
-      "flags": {},
-      "order": 14,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "pose_guider",
-          "type": "POSE_GUIDER",
-          "link": 5
-        },
-        {
-          "name": "pose_images",
-          "type": "IMAGE",
-          "link": 27
-        }
-      ],
-      "outputs": [
-        {
-          "name": "pose_latent",
-          "type": "POSE_LATENT",
-          "links": [
-            22
-          ],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "[ComfyUI-3D] Pose Guider Encode"
-      }
-    },
-    {
       "id": 6,
       "type": "CLIPVisionLoader",
       "pos": [
@@ -279,7 +123,7 @@
         "1": 58
       },
       "flags": {},
-      "order": 3,
+      "order": 1,
       "mode": 0,
       "outputs": [
         {
@@ -300,47 +144,6 @@
       ]
     },
     {
-      "id": 5,
-      "type": "CLIPVisionEncode",
-      "pos": [
-        1544,
-        592
-      ],
-      "size": {
-        "0": 380.4000244140625,
-        "1": 46
-      },
-      "flags": {},
-      "order": 13,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "clip_vision",
-          "type": "CLIP_VISION",
-          "link": 3
-        },
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 25
-        }
-      ],
-      "outputs": [
-        {
-          "name": "CLIP_VISION_OUTPUT",
-          "type": "CLIP_VISION_OUTPUT",
-          "links": [
-            21
-          ],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "CLIPVisionEncode"
-      }
-    },
-    {
       "id": 4,
       "type": "LoadImage",
       "pos": [
@@ -352,7 +155,7 @@
         "1": 314
       },
       "flags": {},
-      "order": 4,
+      "order": 2,
       "mode": 0,
       "outputs": [
         {
@@ -391,7 +194,7 @@
         "1": 58
       },
       "flags": {},
-      "order": 5,
+      "order": 3,
       "mode": 0,
       "outputs": [
         {
@@ -426,7 +229,7 @@
         "1": 58
       },
       "flags": {},
-      "order": 6,
+      "order": 4,
       "mode": 0,
       "outputs": [
         {
@@ -461,7 +264,7 @@
         "1": 60.091087341308594
       },
       "flags": {},
-      "order": 7,
+      "order": 5,
       "mode": 0,
       "outputs": [
         {
@@ -655,7 +458,7 @@
           "hidden": false,
           "paused": false,
           "params": {
-            "filename": "video_00019.mp4",
+            "filename": "video_00087.mp4",
             "subfolder": "AnimateAnyone",
             "type": "output",
             "format": "video/h265-mp4"
@@ -664,15 +467,212 @@
       }
     },
     {
-      "id": 21,
-      "type": "[ComfyUI-3D] Animate Anyone Sampler",
+      "id": 11,
+      "type": "[ComfyUI-3D] Load UNet2D ConditionModel",
       "pos": [
-        2159,
-        48
+        1435,
+        195
       ],
       "size": {
-        "0": 328.86407470703125,
-        "1": 594
+        "0": 407.1247863769531,
+        "1": 86.651123046875
+      },
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "unet2d",
+          "type": "UNET2D",
+          "links": [
+            51
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "[ComfyUI-3D] Load UNet2D ConditionModel"
+      },
+      "widgets_values": [
+        "./pretrained_weights/stable-diffusion-v1-5/unet/",
+        "./pretrained_weights/reference_unet.pth"
+      ]
+    },
+    {
+      "id": 12,
+      "type": "[ComfyUI-3D] Load UNet3D ConditionModel",
+      "pos": [
+        1471,
+        358
+      ],
+      "size": {
+        "0": 409.384033203125,
+        "1": 106
+      },
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "unet3d",
+          "type": "UNET3D",
+          "links": [
+            52
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "[ComfyUI-3D] Load UNet3D ConditionModel"
+      },
+      "widgets_values": [
+        "./pretrained_weights/stable-diffusion-v1-5/unet/",
+        "./pretrained_weights/denoising_unet.pth",
+        "./pretrained_weights/motion_module.pth"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "VAEEncode",
+      "pos": [
+        1542,
+        88
+      ],
+      "size": {
+        "0": 210,
+        "1": 46
+      },
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 24
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            53
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEEncode",
+        "ttNbgOverride": {
+          "color": "#223",
+          "bgcolor": "#335",
+          "groupcolor": "#88A"
+        }
+      },
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 5,
+      "type": "CLIPVisionEncode",
+      "pos": [
+        1544,
+        592
+      ],
+      "size": {
+        "0": 380.4000244140625,
+        "1": 46
+      },
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip_vision",
+          "type": "CLIP_VISION",
+          "link": 3
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 25
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CLIP_VISION_OUTPUT",
+          "type": "CLIP_VISION_OUTPUT",
+          "links": [
+            54
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPVisionEncode"
+      }
+    },
+    {
+      "id": 8,
+      "type": "[ComfyUI-3D] Pose Guider Encode",
+      "pos": [
+        1668,
+        704
+      ],
+      "size": {
+        "0": 292.20001220703125,
+        "1": 46
+      },
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pose_guider",
+          "type": "POSE_GUIDER",
+          "link": 5
+        },
+        {
+          "name": "pose_images",
+          "type": "IMAGE",
+          "link": 27
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pose_latent",
+          "type": "POSE_LATENT",
+          "links": [
+            55
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "[ComfyUI-3D] Pose Guider Encode"
+      }
+    },
+    {
+      "id": 31,
+      "type": "[ComfyUI-3D] Animate Anyone Sampler",
+      "pos": [
+        2091,
+        47
+      ],
+      "size": {
+        "0": 315,
+        "1": 618
       },
       "flags": {},
       "order": 15,
@@ -681,27 +681,27 @@
         {
           "name": "reference_unet",
           "type": "UNET2D",
-          "link": 18
+          "link": 51
         },
         {
           "name": "denoising_unet",
           "type": "UNET3D",
-          "link": 19
+          "link": 52
         },
         {
           "name": "ref_image_latent",
           "type": "LATENT",
-          "link": 20
+          "link": 53
         },
         {
           "name": "clip_image_embeds",
           "type": "CLIP_VISION_OUTPUT",
-          "link": 21
+          "link": 54
         },
         {
           "name": "pose_latent",
           "type": "POSE_LATENT",
-          "link": 22
+          "link": 55
         }
       ],
       "outputs": [
@@ -709,7 +709,7 @@
           "name": "latent",
           "type": "LATENT",
           "links": [
-            23
+            56
           ],
           "shape": 3,
           "slot_index": 0
@@ -723,22 +723,23 @@
         "fixed",
         20,
         3.5,
+        1,
         24,
         1,
         4,
         1,
         1,
         "DDIM",
-        0.0008500000000000001,
+        0.00085,
         0.012,
         "linear",
         "v_prediction",
         "trailing",
         1,
         false,
-        "cammy_white_v1.safetensors",
+        true,
         false,
-        "lcm-lora-sdv1-5.safetensors"
+        "cammy_white_v1.safetensors"
       ]
     },
     {
@@ -857,54 +858,6 @@
       "IMAGE"
     ],
     [
-      18,
-      11,
-      0,
-      21,
-      0,
-      "UNET2D"
-    ],
-    [
-      19,
-      12,
-      0,
-      21,
-      1,
-      "UNET3D"
-    ],
-    [
-      20,
-      2,
-      0,
-      21,
-      2,
-      "LATENT"
-    ],
-    [
-      21,
-      5,
-      0,
-      21,
-      3,
-      "CLIP_VISION_OUTPUT"
-    ],
-    [
-      22,
-      8,
-      0,
-      21,
-      4,
-      "POSE_LATENT"
-    ],
-    [
-      23,
-      21,
-      0,
-      14,
-      0,
-      "LATENT"
-    ],
-    [
       24,
       22,
       0,
@@ -975,6 +928,54 @@
       23,
       2,
       "INT"
+    ],
+    [
+      51,
+      11,
+      0,
+      31,
+      0,
+      "UNET2D"
+    ],
+    [
+      52,
+      12,
+      0,
+      31,
+      1,
+      "UNET3D"
+    ],
+    [
+      53,
+      2,
+      0,
+      31,
+      2,
+      "LATENT"
+    ],
+    [
+      54,
+      5,
+      0,
+      31,
+      3,
+      "CLIP_VISION_OUTPUT"
+    ],
+    [
+      55,
+      8,
+      0,
+      31,
+      4,
+      "POSE_LATENT"
+    ],
+    [
+      56,
+      31,
+      0,
+      14,
+      0,
+      "LATENT"
     ]
   ],
   "groups": [],
