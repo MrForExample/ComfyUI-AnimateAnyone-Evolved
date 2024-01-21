@@ -1,9 +1,13 @@
-class MyClass:
-    def my_function(self):
-        self.x = 123
-        pass
+import inspect
+from diffusers.schedulers import (
+    DDIMScheduler,
+    DPMSolverMultistepScheduler,
+    LCMScheduler,
+    EulerDiscreteScheduler,
+    EulerAncestralDiscreteScheduler,
+    LMSDiscreteScheduler,
+    PNDMScheduler,
+)
 
-mc = MyClass()
-mc.my_function()
-if hasattr(mc, 'z'):
-    print('MyClass has x')
+print("clip_samples" in inspect.signature(DDIMScheduler.__init__).parameters)
+    

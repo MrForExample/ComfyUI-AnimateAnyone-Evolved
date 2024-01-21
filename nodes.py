@@ -18,12 +18,10 @@ from diffusers.schedulers import (
     PNDMScheduler,
 )
 
-from .src.models.mutual_self_attention import ReferenceAttentionControl
 from .src.models.pose_guider import PoseGuider
 from .src.models.unet_2d_condition import UNet2DConditionModel
 from .src.models.unet_3d import UNet3DConditionModel
-from .src.models.main_model_patcher import AnimateAnyoneModelPatcher
-from .src.models.main_diffuser import AADiffusion, CFGType
+from .src.models.main_diffuser import AADiffusion
 
 ROOT_PATH = os.path.join(comfy_paths.get_folder_paths("custom_nodes")[0], "./ComfyUI-AnimateAnyone-Evolved")
 DEFAULT_CONFIG_PATH = os.path.join(ROOT_PATH, "./configs/default.yaml")
@@ -57,8 +55,6 @@ class Animate_Anyone_Sampler:
                 "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                 "cfg": ("FLOAT", {"default": 3.5, "min": 0.0, "max": 100.0, "step":0.1, "round": 0.01}),
                 "delta": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 100.0, "step":0.1, "round": 0.01}),
-                "cfg_type": (["rcfg_self_negative", "rcfg_one_time_negative", "full_double_pass"],),
-                "steps_rcfg": ("INT", {"default": 3, "min": 1, "max": 10000}),
                 "context_frames": ("INT", {"default": 24, "min": 1}),
                 "context_stride": ("INT", {"default": 1, "min": 1}),
                 "context_overlap": ("INT", {"default": 4, "min": 0}),
@@ -100,9 +96,7 @@ class Animate_Anyone_Sampler:
         seed, 
         steps, 
         cfg,
-        steps_rcfg,
         delta,
-        cfg_type,
         context_frames,
         context_stride,
         context_overlap,
@@ -159,8 +153,6 @@ class Animate_Anyone_Sampler:
             steps, 
             cfg,
             delta,
-            CFGType[cfg_type],
-            steps_rcfg,
             ref_image_latent,
             pose_latent, 
             encoder_hidden_states,

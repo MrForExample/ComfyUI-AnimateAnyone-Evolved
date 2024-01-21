@@ -4,8 +4,10 @@ import math
 from enum import Enum
 from typing import Callable, List, Optional, Union
 
+import comfy.utils
+
 import torch
-from diffusers import DiffusionPipeline
+from diffusers import DiffusionPipeline, StableDiffusionPipeline
 from diffusers.loaders import LoraLoaderMixin
 from diffusers.schedulers import (
     DDIMScheduler,
@@ -20,17 +22,12 @@ from diffusers.utils.torch_utils import randn_tensor
 
 from .mutual_self_attention import ReferenceAttentionControl
 from ..utils.util import get_tensor_interpolation_method, get_context_scheduler
-
-class CFGType(Enum):
-    rcfg_self_negative = 1
-    rcfg_one_time_negative = 2
-    full_double_pass = 3
     
 class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
     def __init__(
         self, 
         reference_unet,
-        denoising_unet,
+        unet,
         scheduler: Union[
             DDIMScheduler,
             LCMScheduler,
@@ -44,11 +41,11 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
         super().__init__()
         self.register_modules(
             reference_unet=reference_unet,
-            denoising_unet=denoising_unet,
+            unet=unet,
             scheduler=scheduler,
         )
         self.reference_unet = reference_unet
-        self.denoising_unet = denoising_unet
+        self.unet = unet
         self.scheduler = scheduler
         
         self.noise_pred_uncond_prev = None
@@ -172,44 +169,38 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
 
         return new_latents
     
-    def calculate_residual_noise(self, t, latents, pred_original_sample):
-        # compute the residual empty/negative condition noise sample
-        alpha_prod_t = self.scheduler.alphas_cumprod[t].to(latents.device)
-        beta_prod_t = 1 - alpha_prod_t
+    def perform_guidance(
+        self, 
+        noise_pred,
+        counter,
+        cfg,
+        delta,
+        do_double_pass,
+    ):
         
-        if self.scheduler.config.prediction_type == "epsilon":
-            # "predicted x_0" of formula (12) from https://arxiv.org/pdf/2010.02502.pdf
-            # rearranged from formular: pred_original_sample = (latents - beta_prod_t ** (0.5) * noise_pred) / alpha_prod_t ** (0.5)
-            noise_pred_uncond_prev = (latents - alpha_prod_t ** (0.5) * pred_original_sample) / beta_prod_t ** (0.5)
-            
-        elif self.scheduler.config.prediction_type == "v_prediction":
-            # v_prediction: (see section 2.4 of [Imagen Video](https://imagen.research.google/video/paper.pdf)
-            # rearranged from formular: pred_original_sample = (alpha_prod_t ** (0.5) * latents - (beta_prod_t ** (0.5) * noise_pred
-            noise_pred_uncond_prev = (alpha_prod_t ** (0.5) * latents - pred_original_sample) / beta_prod_t ** (0.5)
-            
-        return noise_pred_uncond_prev
+        # perform CFG
+        if do_double_pass:
+            noise_pred_uncond, noise_pred_cond = (noise_pred / counter).chunk(2)
+        else:
+            noise_pred_cond = noise_pred_uncond = noise_pred / counter
+            cfg = 0.0
+        noise_pred = delta * noise_pred_uncond + cfg * (noise_pred_cond - delta * noise_pred_uncond)
+
+        return noise_pred
     
     def denoise_all_one_step(
         self, 
         t, 
         latents, 
         encoder_hidden_states,
-        uncond_encoder_hidden_states,
         pose_latent, 
         global_context, 
+        do_double_pass,
         device,
     ):
         noise_pred = torch.zeros(
             (
-                latents.shape[0],
-                *latents.shape[1:],
-            ),
-            device=device,
-            dtype=latents.dtype,
-        )
-        noise_pred_uncond = torch.zeros(
-            (
-                latents.shape[0],
+                latents.shape[0] * (2 if do_double_pass else 1),
                 *latents.shape[1:],
             ),
             device=device,
@@ -226,6 +217,7 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
             latent_model_input = (
                 torch.cat([latents[:, :, c] for c in context]) # Concatenates the context in the same batch
                 .to(device)
+                .repeat(2 if do_double_pass else 1, 1, 1, 1, 1)
             )
             latent_model_input = self.scheduler.scale_model_input(
                 latent_model_input, t
@@ -233,66 +225,56 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
             b, c, f, h, w = latent_model_input.shape
             latent_pose_input = torch.cat(
                 [pose_latent[:, :, c] for c in context]
-            )
-            pred = self.denoising_unet(
+            ).repeat(2 if do_double_pass else 1, 1, 1, 1, 1)
+            pred = self.unet(
                 latent_model_input,     # torch.Size([2, 4, 24, 96, 64])
                 t,
                 encoder_hidden_states=encoder_hidden_states[:b],
                 pose_cond_fea=latent_pose_input,    # torch.Size([2, 320, 24, 96, 64])
                 return_dict=False,
             )[0]
-            pred_uncond = self.denoising_unet(
-                latent_model_input,     # torch.Size([2, 4, 24, 96, 64])
-                t,
-                encoder_hidden_states=uncond_encoder_hidden_states[:b],
-                pose_cond_fea=latent_pose_input,    # torch.Size([2, 320, 24, 96, 64])
-                return_dict=False,
-            )[0]
 
             for j, c in enumerate(context):
                 noise_pred[:, :, c] = noise_pred[:, :, c] + pred
-                noise_pred_uncond[:, :, c] = noise_pred_uncond[:, :, c] + pred_uncond
                 counter[:, :, c] = counter[:, :, c] + 1
                 
-        return noise_pred, noise_pred_uncond, counter
+        return noise_pred, counter
         
     def solve_one_step(
         self,
         t, 
         latents, 
         encoder_hidden_states,
-        uncond_encoder_hidden_states,
         pose_latent, 
         global_context, 
         cfg,
         delta,
-        do_rcfg,
-        noise_pred_uncond_prev,
+        do_double_pass,
         device,
         extra_step_kwargs,
     ):
         
-        noise_pred, noise_pred_uncond, counter = self.denoise_all_one_step(
-            t, 
-            latents, 
-            encoder_hidden_states,
-            uncond_encoder_hidden_states,
-            pose_latent, 
-            global_context, 
-            device,
+        noise_pred, counter = self.denoise_all_one_step(
+            t=t, 
+            latents=latents, 
+            encoder_hidden_states=encoder_hidden_states,
+            pose_latent=pose_latent, 
+            global_context=global_context, 
+            do_double_pass=do_double_pass,
+            device=device,
         )
         
-        # CFG
-        noise_pred_cond = noise_pred / counter
-        noise_pred_uncond = noise_pred_uncond / counter
-        noise_pred = delta * noise_pred_uncond + cfg * (noise_pred_cond - delta * noise_pred_uncond)
+        noise_pred = self.perform_guidance(
+            noise_pred=noise_pred,
+            counter=counter,
+            cfg=cfg,
+            delta=delta,
+            do_double_pass=do_double_pass,
+        )
   
         scheduler_output = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs)
-        
-        if do_rcfg:
-            noise_pred_uncond_prev = self.calculate_residual_noise(t, latents, scheduler_output.pred_original_sample)
             
-        return scheduler_output.prev_sample, noise_pred_uncond_prev
+        return scheduler_output.prev_sample
     
     def denoise_loop(
         self,
@@ -305,13 +287,16 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
         cfg,
         delta,
         do_double_pass,
-        do_rcfg,
         interpolation_factor,
         device,
         extra_step_kwargs,
     ):
         # Prepare confitional embeds
-        uncond_encoder_hidden_states = torch.zeros_like(encoder_hidden_states)
+        if do_double_pass:
+            uncond_encoder_hidden_states = torch.zeros_like(encoder_hidden_states)
+            encoder_hidden_states=torch.cat(
+                    [uncond_encoder_hidden_states, encoder_hidden_states], dim=0
+                )
         
         # Prepare reference attention control
         reference_control_writer = ReferenceAttentionControl(
@@ -321,7 +306,7 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
             fusion_blocks="full",
         )
         reference_control_reader = ReferenceAttentionControl(
-            self.denoising_unet,
+            self.unet,
             do_classifier_free_guidance=do_double_pass,
             mode="read",
             fusion_blocks="full",
@@ -330,10 +315,7 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
         self.reference_unet(
             ref_image_latent.repeat(2 if do_double_pass else 1, 1, 1, 1),
             torch.zeros(size=(1,), dtype=int, device=device),
-            #encoder_hidden_states=encoder_hidden_states,
-            encoder_hidden_states=torch.cat(
-                [uncond_encoder_hidden_states, encoder_hidden_states], dim=0
-            ) if do_double_pass else encoder_hidden_states,
+            encoder_hidden_states=encoder_hidden_states,
             return_dict=False,
         )
         reference_control_reader.update(reference_control_writer)
@@ -342,25 +324,26 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
         self.scheduler.set_timesteps(loop_steps, device=device)
         timesteps = self.scheduler.timesteps
         
+        comfy_pbar = comfy.utils.ProgressBar(loop_steps)
+        
         with self.progress_bar(total=loop_steps) as progress_bar:
             for i, t in enumerate(timesteps):
 
-                latents, self.noise_pred_uncond_prev = self.solve_one_step(
-                    t, 
-                    latents, 
-                    encoder_hidden_states,
-                    uncond_encoder_hidden_states,
-                    pose_latent, 
-                    global_context, 
-                    cfg,
-                    delta,
-                    do_rcfg,
-                    self.noise_pred_uncond_prev,
-                    device,
-                    extra_step_kwargs,
+                latents = self.solve_one_step(
+                    t=t, 
+                    latents=latents, 
+                    encoder_hidden_states=encoder_hidden_states,
+                    pose_latent=pose_latent, 
+                    global_context=global_context, 
+                    cfg=cfg,
+                    delta=delta,
+                    do_double_pass=do_double_pass,
+                    device=device,
+                    extra_step_kwargs=extra_step_kwargs,
                 )
 
                 progress_bar.update()
+                comfy_pbar.update_absolute(i + 1)
 
         if interpolation_factor > 0:
             latents = self.interpolate_latents(latents, interpolation_factor, device)
@@ -376,8 +359,6 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
         steps,
         cfg,
         delta,
-        cfg_type,
-        steps_rcfg,
         ref_image_latent,
         pose_latent,
         encoder_hidden_states,
@@ -391,9 +372,7 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
         interpolation_factor=1,
     ):
 
-        do_classifier_free_guidance = cfg > 0
-        do_double_pass = do_classifier_free_guidance and cfg_type == CFGType.full_double_pass
-        do_rcfg = do_classifier_free_guidance and (cfg_type == CFGType.rcfg_self_negative or cfg_type == CFGType.rcfg_one_time_negative)
+        do_double_pass = cfg > 0
 
         device = pose_latent.device
         generator=torch.manual_seed(seed)
@@ -448,7 +427,7 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
         # Prepare initial latents
         latents = self.prepare_latents(
             batch_size=pose_latent.shape[0],
-            num_channels_latents=self.denoising_unet.config.in_channels,
+            num_channels_latents=self.unet.config.in_channels,
             video_length=video_length,
             height=pose_latent.shape[-2],
             width=pose_latent.shape[-1],
@@ -467,8 +446,7 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
             global_context=global_context,
             cfg=cfg,
             delta=delta,
-            do_double_pass=False,
-            do_rcfg=False,
+            do_double_pass=do_double_pass,
             interpolation_factor=interpolation_factor,
             device=device,
             extra_step_kwargs=extra_step_kwargs,

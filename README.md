@@ -35,12 +35,15 @@
   - I tried to break it down into as many modules as possible, so the workflow in ComfyUI would closely resemble the original pipeline from AnimateAnyone paper:
     <br>![_Example_Workflow\_Other_Imgs\AA_pipeline.png](_Example_Workflow/_Other_Imgs/AA_pipeline.png)
 
-## Will Do Next
-- Train a LCM Lora for denoise unet (**Estimated speed up: 5X**)
-- Convert Model using [stable-fast](https://github.com/chengzeyi/stable-fast) (**Estimated speed up: 2X**)
-- Implement the compoents (Residual CFG) proposed in [StreamDiffusion](https://github.com/cumulo-autumn/StreamDiffusion?tab=readme-ov-file) (**Estimated speed up: 2X**)
-- Incorporate the implementation & Pre-trained Models from [Open-AnimateAnyone](https://github.com/guoqincode/Open-AnimateAnyone) & [AnimateAnyone](https://github.com/HumanAIGC/AnimateAnyone) once they released
-- Training a new Model using better dataset to improve results quality (Optional, we'll see if there is any need for me to do it ;)
+## Roadmap
+- [x]  Implement the compoents (Residual CFG) proposed in [StreamDiffusion](https://github.com/cumulo-autumn/StreamDiffusion?tab=readme-ov-file) (**Estimated speed up: 2X**)
+  - **Result:**  
+    Generated result is not good enough when using DDIM Scheduler togather with RCFG, even though it speed up the generating process by about 4X.<br>
+    In StreamDiffusion, RCFG works with LCM, could also be the case here, so keep it in another branch for now.
+- [ ] Convert Model using [stable-fast](https://github.com/chengzeyi/stable-fast) (**Estimated speed up: 2X**)
+- [ ] Train a LCM Lora for denoise unet (**Estimated speed up: 5X**)
+- [ ] Incorporate the implementation & Pre-trained Models from [Open-AnimateAnyone](https://github.com/guoqincode/Open-AnimateAnyone) & [AnimateAnyone](https://github.com/HumanAIGC/AnimateAnyone) once they released
+- [ ] Training a new Model using better dataset to improve results quality (Optional, we'll see if there is any need for me to do it ;)
 - Continuous research, always moving towards something better & faster🚀
 
 ## Install (Will add it to ComfyUI Manager Soon!)
