@@ -189,43 +189,27 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
             
         return noise_pred_uncond_prev
     
-    def perform_guidance(
-        self, 
-        noise_pred,
-        counter,
-        cfg,
-        delta,
-        do_double_pass,
-        noise_pred_uncond_prev=None,
-        ):
-        
-        # perform CFG/RCFG guidance
-        if do_double_pass:
-            noise_pred_uncond, noise_pred_cond = (noise_pred / counter).chunk(2)
-        elif noise_pred_uncond_prev is not None:
-            noise_pred_cond = noise_pred / counter
-            noise_pred_uncond = noise_pred_uncond_prev
-        else:
-            noise_pred_cond = noise_pred_uncond = noise_pred / counter
-            cfg = 0.0
-        # RCFG of formula (7) from https://arxiv.org/pdf/2312.12491.pdf
-        noise_pred = delta * noise_pred_uncond + cfg * (noise_pred_cond - delta * noise_pred_uncond)
-
-        return noise_pred
-    
     def denoise_all_one_step(
         self, 
         t, 
         latents, 
         encoder_hidden_states,
+        uncond_encoder_hidden_states,
         pose_latent, 
         global_context, 
-        do_double_pass,
         device,
     ):
         noise_pred = torch.zeros(
             (
-                latents.shape[0] * (2 if do_double_pass else 1),
+                latents.shape[0],
+                *latents.shape[1:],
+            ),
+            device=device,
+            dtype=latents.dtype,
+        )
+        noise_pred_uncond = torch.zeros(
+            (
+                latents.shape[0],
                 *latents.shape[1:],
             ),
             device=device,
@@ -242,7 +226,6 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
             latent_model_input = (
                 torch.cat([latents[:, :, c] for c in context]) # Concatenates the context in the same batch
                 .to(device)
-                .repeat(2 if do_double_pass else 1, 1, 1, 1, 1)
             )
             latent_model_input = self.scheduler.scale_model_input(
                 latent_model_input, t
@@ -250,7 +233,7 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
             b, c, f, h, w = latent_model_input.shape
             latent_pose_input = torch.cat(
                 [pose_latent[:, :, c] for c in context]
-            ).repeat(2 if do_double_pass else 1, 1, 1, 1, 1)
+            )
             pred = self.denoising_unet(
                 latent_model_input,     # torch.Size([2, 4, 24, 96, 64])
                 t,
@@ -258,46 +241,51 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
                 pose_cond_fea=latent_pose_input,    # torch.Size([2, 320, 24, 96, 64])
                 return_dict=False,
             )[0]
+            pred_uncond = self.denoising_unet(
+                latent_model_input,     # torch.Size([2, 4, 24, 96, 64])
+                t,
+                encoder_hidden_states=uncond_encoder_hidden_states[:b],
+                pose_cond_fea=latent_pose_input,    # torch.Size([2, 320, 24, 96, 64])
+                return_dict=False,
+            )[0]
 
             for j, c in enumerate(context):
                 noise_pred[:, :, c] = noise_pred[:, :, c] + pred
+                noise_pred_uncond[:, :, c] = noise_pred_uncond[:, :, c] + pred_uncond
                 counter[:, :, c] = counter[:, :, c] + 1
                 
-        return noise_pred, counter
+        return noise_pred, noise_pred_uncond, counter
         
     def solve_one_step(
         self,
         t, 
         latents, 
         encoder_hidden_states,
+        uncond_encoder_hidden_states,
         pose_latent, 
         global_context, 
         cfg,
         delta,
-        do_double_pass,
         do_rcfg,
         noise_pred_uncond_prev,
         device,
         extra_step_kwargs,
     ):
         
-        noise_pred, counter = self.denoise_all_one_step(
+        noise_pred, noise_pred_uncond, counter = self.denoise_all_one_step(
             t, 
             latents, 
             encoder_hidden_states,
+            uncond_encoder_hidden_states,
             pose_latent, 
             global_context, 
-            do_double_pass,
             device,
         )
-        noise_pred = self.perform_guidance(
-            noise_pred,
-            counter,
-            cfg,
-            delta,
-            do_double_pass,
-            noise_pred_uncond_prev,
-        )
+        
+        # CFG
+        noise_pred_cond = noise_pred / counter
+        noise_pred_uncond = noise_pred_uncond / counter
+        noise_pred = delta * noise_pred_uncond + cfg * (noise_pred_cond - delta * noise_pred_uncond)
   
         scheduler_output = self.scheduler.step(noise_pred, t, latents, **extra_step_kwargs)
         
@@ -324,10 +312,6 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
     ):
         # Prepare confitional embeds
         uncond_encoder_hidden_states = torch.zeros_like(encoder_hidden_states)
-        if do_double_pass:
-            encoder_hidden_states = torch.cat(
-                [uncond_encoder_hidden_states, encoder_hidden_states], dim=0
-            )
         
         # Prepare reference attention control
         reference_control_writer = ReferenceAttentionControl(
@@ -346,7 +330,10 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
         self.reference_unet(
             ref_image_latent.repeat(2 if do_double_pass else 1, 1, 1, 1),
             torch.zeros(size=(1,), dtype=int, device=device),
-            encoder_hidden_states=encoder_hidden_states,
+            #encoder_hidden_states=encoder_hidden_states,
+            encoder_hidden_states=torch.cat(
+                [uncond_encoder_hidden_states, encoder_hidden_states], dim=0
+            ) if do_double_pass else encoder_hidden_states,
             return_dict=False,
         )
         reference_control_reader.update(reference_control_writer)
@@ -362,11 +349,11 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
                     t, 
                     latents, 
                     encoder_hidden_states,
+                    uncond_encoder_hidden_states,
                     pose_latent, 
                     global_context, 
                     cfg,
                     delta,
-                    do_double_pass,
                     do_rcfg,
                     self.noise_pred_uncond_prev,
                     device,
@@ -470,11 +457,10 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
             generator=generator,
         )
         
-        # single pass denoising loop
-
+        # sequential double pass
         latents = self.denoise_loop(
             ref_image_latent=ref_image_latent,
-            loop_steps=steps_rcfg,
+            loop_steps=steps,
             latents=latents,
             encoder_hidden_states=encoder_hidden_states,
             pose_latent=pose_latent,
@@ -482,23 +468,6 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
             cfg=cfg,
             delta=delta,
             do_double_pass=False,
-            do_rcfg=False,
-            interpolation_factor=interpolation_factor,
-            device=device,
-            extra_step_kwargs=extra_step_kwargs,
-        )
-        
-        # double pass fine-tune
-        latents = self.denoise_loop(
-            ref_image_latent=ref_image_latent,
-            loop_steps=steps-steps_rcfg,
-            latents=latents,
-            encoder_hidden_states=encoder_hidden_states,
-            pose_latent=pose_latent,
-            global_context=global_context,
-            cfg=cfg,
-            delta=delta,
-            do_double_pass=True,
             do_rcfg=False,
             interpolation_factor=interpolation_factor,
             device=device,
