@@ -1,6 +1,6 @@
 accelerate
 clip @ https://github.com/openai/CLIP/archive/d50d76daa670286dd6cacf3bcd80b5e4823fc8e1.zip#sha256=b5842c25da441d6c581b53a5c60e0c2127ebafe0f746f8e15561a006c6c3be6a
-diffusers
+diffusers>=0.25.1
 einops
 gradio
 gradio_client
