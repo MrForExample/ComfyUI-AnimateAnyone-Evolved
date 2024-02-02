@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 from diffusers.models.activations import get_activation
 from diffusers.models.attention_processor import Attention
-from diffusers.models.dual_transformer_2d import DualTransformer2DModel
+from diffusers.models.transformers.dual_transformer_2d import DualTransformer2DModel
 from diffusers.models.resnet import Downsample2D, ResnetBlock2D, Upsample2D
 from diffusers.utils import is_torch_version, logging
 from diffusers.utils.torch_utils import apply_freeu

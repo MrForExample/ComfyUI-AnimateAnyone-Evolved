@@ -1,43 +1,7 @@
 {
-  "last_node_id": 31,
-  "last_link_id": 56,
+  "last_node_id": 36,
+  "last_link_id": 64,
   "nodes": [
-    {
-      "id": 15,
-      "type": "Reroute",
-      "pos": [
-        1578,
-        -110
-      ],
-      "size": [
-        75,
-        26
-      ],
-      "flags": {},
-      "order": 10,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "",
-          "type": "*",
-          "link": 14
-        }
-      ],
-      "outputs": [
-        {
-          "name": "",
-          "type": "VAE",
-          "links": [
-            15
-          ],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "showOutputText": false,
-        "horizontal": false
-      }
-    },
     {
       "id": 14,
       "type": "VAEDecode",
@@ -56,7 +20,7 @@
         {
           "name": "samples",
           "type": "LATENT",
-          "link": 56
+          "link": 60
         },
         {
           "name": "vae",
@@ -80,38 +44,6 @@
       }
     },
     {
-      "id": 7,
-      "type": "[ComfyUI-3D] Load Pose Guider",
-      "pos": [
-        1106,
-        704
-      ],
-      "size": {
-        "0": 366.0615234375,
-        "1": 58
-      },
-      "flags": {},
-      "order": 0,
-      "mode": 0,
-      "outputs": [
-        {
-          "name": "pose_guider",
-          "type": "POSE_GUIDER",
-          "links": [
-            5
-          ],
-          "shape": 3,
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "[ComfyUI-3D] Load Pose Guider"
-      },
-      "widgets_values": [
-        "./pretrained_weights/pose_guider.pth"
-      ]
-    },
-    {
       "id": 6,
       "type": "CLIPVisionLoader",
       "pos": [
@@ -123,7 +55,7 @@
         "1": 58
       },
       "flags": {},
-      "order": 1,
+      "order": 0,
       "mode": 0,
       "outputs": [
         {
@@ -155,7 +87,7 @@
         "1": 314
       },
       "flags": {},
-      "order": 2,
+      "order": 1,
       "mode": 0,
       "outputs": [
         {
@@ -194,7 +126,7 @@
         "1": 58
       },
       "flags": {},
-      "order": 3,
+      "order": 2,
       "mode": 0,
       "outputs": [
         {
@@ -229,7 +161,7 @@
         "1": 58
       },
       "flags": {},
-      "order": 4,
+      "order": 3,
       "mode": 0,
       "outputs": [
         {
@@ -264,7 +196,7 @@
         "1": 60.091087341308594
       },
       "flags": {},
-      "order": 5,
+      "order": 4,
       "mode": 0,
       "outputs": [
         {
@@ -349,6 +281,38 @@
       ]
     },
     {
+      "id": 35,
+      "type": "[AnimateAnyone] Load Pose Guider",
+      "pos": [
+        1169,
+        703
+      ],
+      "size": {
+        "0": 315,
+        "1": 58
+      },
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "outputs": [
+        {
+          "name": "pose_guider",
+          "type": "POSE_GUIDER",
+          "links": [
+            61
+          ],
+          "shape": 3,
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "[AnimateAnyone] Load Pose Guider"
+      },
+      "widgets_values": [
+        "./pretrained_weights/pose_guider.pth"
+      ]
+    },
+    {
       "id": 23,
       "type": "ImageScale",
       "pos": [
@@ -390,7 +354,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            27
+            62
           ],
           "shape": 3,
           "slot_index": 0
@@ -408,74 +372,94 @@
       ]
     },
     {
-      "id": 16,
-      "type": "VHS_VideoCombine",
+      "id": 32,
+      "type": "[AnimateAnyone] Animate Anyone Sampler",
       "pos": [
-        2986,
-        -130
+        2095,
+        48
       ],
-      "size": [
-        315,
-        701.5
-      ],
+      "size": {
+        "0": 315,
+        "1": 618
+      },
       "flags": {},
-      "order": 17,
+      "order": 15,
       "mode": 0,
       "inputs": [
         {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 16
+          "name": "reference_unet",
+          "type": "UNET2D",
+          "link": 58
         },
         {
-          "name": "audio",
-          "type": "VHS_AUDIO",
-          "link": null
+          "name": "denoising_unet",
+          "type": "UNET3D",
+          "link": 59
+        },
+        {
+          "name": "ref_image_latent",
+          "type": "LATENT",
+          "link": 57
+        },
+        {
+          "name": "clip_image_embeds",
+          "type": "CLIP_VISION_OUTPUT",
+          "link": 64
+        },
+        {
+          "name": "pose_latent",
+          "type": "POSE_LATENT",
+          "link": 63
         }
       ],
       "outputs": [
         {
-          "name": "Filenames",
-          "type": "VHS_FILENAMES",
-          "links": null,
-          "shape": 3
+          "name": "latent",
+          "type": "LATENT",
+          "links": [
+            60
+          ],
+          "shape": 3,
+          "slot_index": 0
         }
       ],
       "properties": {
-        "Node name for S&R": "VHS_VideoCombine"
+        "Node name for S&R": "[AnimateAnyone] Animate Anyone Sampler"
       },
-      "widgets_values": {
-        "frame_rate": 12,
-        "loop_count": 0,
-        "filename_prefix": "AnimateAnyone/video",
-        "format": "video/h265-mp4",
-        "pix_fmt": "yuv420p10le",
-        "crf": 22,
-        "save_metadata": true,
-        "pingpong": false,
-        "save_output": true,
-        "videopreview": {
-          "hidden": false,
-          "paused": false,
-          "params": {
-            "filename": "video_00087.mp4",
-            "subfolder": "AnimateAnyone",
-            "type": "output",
-            "format": "video/h265-mp4"
-          }
-        }
-      }
+      "widgets_values": [
+        999999999,
+        "fixed",
+        20,
+        3.5,
+        1,
+        24,
+        1,
+        4,
+        1,
+        1,
+        "DDIM",
+        0.00085,
+        0.012,
+        "linear",
+        "v_prediction",
+        "trailing",
+        1,
+        false,
+        true,
+        false,
+        "cammy_white_v1.safetensors"
+      ]
     },
     {
-      "id": 11,
-      "type": "[ComfyUI-3D] Load UNet2D ConditionModel",
+      "id": 33,
+      "type": "[AnimateAnyone] Load UNet2D ConditionModel",
       "pos": [
-        1435,
-        195
+        1488,
+        202
       ],
       "size": {
-        "0": 407.1247863769531,
-        "1": 86.651123046875
+        "0": 420.5655212402344,
+        "1": 82
       },
       "flags": {},
       "order": 6,
@@ -485,14 +469,14 @@
           "name": "unet2d",
           "type": "UNET2D",
           "links": [
-            51
+            58
           ],
           "shape": 3,
           "slot_index": 0
         }
       ],
       "properties": {
-        "Node name for S&R": "[ComfyUI-3D] Load UNet2D ConditionModel"
+        "Node name for S&R": "[AnimateAnyone] Load UNet2D ConditionModel"
       },
       "widgets_values": [
         "./pretrained_weights/stable-diffusion-v1-5/unet/",
@@ -500,15 +484,15 @@
       ]
     },
     {
-      "id": 12,
-      "type": "[ComfyUI-3D] Load UNet3D ConditionModel",
+      "id": 34,
+      "type": "[AnimateAnyone] Load UNet3D ConditionModel",
       "pos": [
-        1471,
-        358
+        1525,
+        343
       ],
       "size": {
-        "0": 409.384033203125,
-        "1": 106
+        "0": 414.0246887207031,
+        "1": 111.3802261352539
       },
       "flags": {},
       "order": 7,
@@ -518,14 +502,14 @@
           "name": "unet3d",
           "type": "UNET3D",
           "links": [
-            52
+            59
           ],
           "shape": 3,
           "slot_index": 0
         }
       ],
       "properties": {
-        "Node name for S&R": "[ComfyUI-3D] Load UNet3D ConditionModel"
+        "Node name for S&R": "[AnimateAnyone] Load UNet3D ConditionModel"
       },
       "widgets_values": [
         "./pretrained_weights/stable-diffusion-v1-5/unet/",
@@ -534,59 +518,52 @@
       ]
     },
     {
-      "id": 2,
-      "type": "VAEEncode",
+      "id": 36,
+      "type": "[AnimateAnyone] Pose Guider Encode",
       "pos": [
-        1542,
-        88
+        1701,
+        702
       ],
       "size": {
-        "0": 210,
+        "0": 292.20001220703125,
         "1": 46
       },
       "flags": {},
-      "order": 12,
+      "order": 14,
       "mode": 0,
       "inputs": [
         {
-          "name": "pixels",
-          "type": "IMAGE",
-          "link": 24
+          "name": "pose_guider",
+          "type": "POSE_GUIDER",
+          "link": 61
         },
         {
-          "name": "vae",
-          "type": "VAE",
-          "link": 1
+          "name": "pose_images",
+          "type": "IMAGE",
+          "link": 62
         }
       ],
       "outputs": [
         {
-          "name": "LATENT",
-          "type": "LATENT",
+          "name": "pose_latent",
+          "type": "POSE_LATENT",
           "links": [
-            53
+            63
           ],
           "shape": 3,
           "slot_index": 0
         }
       ],
       "properties": {
-        "Node name for S&R": "VAEEncode",
-        "ttNbgOverride": {
-          "color": "#223",
-          "bgcolor": "#335",
-          "groupcolor": "#88A"
-        }
-      },
-      "color": "#223",
-      "bgcolor": "#335"
+        "Node name for S&R": "[AnimateAnyone] Pose Guider Encode"
+      }
     },
     {
       "id": 5,
       "type": "CLIPVisionEncode",
       "pos": [
-        1544,
-        592
+        1584,
+        588
       ],
       "size": {
         "0": 380.4000244140625,
@@ -612,7 +589,7 @@
           "name": "CLIP_VISION_OUTPUT",
           "type": "CLIP_VISION_OUTPUT",
           "links": [
-            54
+            64
           ],
           "shape": 3,
           "slot_index": 0
@@ -623,124 +600,88 @@
       }
     },
     {
-      "id": 8,
-      "type": "[ComfyUI-3D] Pose Guider Encode",
+      "id": 2,
+      "type": "VAEEncode",
       "pos": [
-        1668,
-        704
+        1584,
+        85
       ],
       "size": {
-        "0": 292.20001220703125,
+        "0": 210,
         "1": 46
       },
       "flags": {},
-      "order": 14,
+      "order": 12,
       "mode": 0,
       "inputs": [
         {
-          "name": "pose_guider",
-          "type": "POSE_GUIDER",
-          "link": 5
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 24
         },
         {
-          "name": "pose_images",
-          "type": "IMAGE",
-          "link": 27
+          "name": "vae",
+          "type": "VAE",
+          "link": 1
         }
       ],
       "outputs": [
         {
-          "name": "pose_latent",
-          "type": "POSE_LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
           "links": [
-            55
+            57
           ],
           "shape": 3,
           "slot_index": 0
         }
       ],
       "properties": {
-        "Node name for S&R": "[ComfyUI-3D] Pose Guider Encode"
-      }
+        "Node name for S&R": "VAEEncode",
+        "ttNbgOverride": {
+          "color": "#223",
+          "bgcolor": "#335",
+          "groupcolor": "#88A"
+        }
+      },
+      "color": "#223",
+      "bgcolor": "#335"
     },
     {
-      "id": 31,
-      "type": "[ComfyUI-3D] Animate Anyone Sampler",
+      "id": 15,
+      "type": "Reroute",
       "pos": [
-        2091,
-        47
+        1583,
+        -110
       ],
-      "size": {
-        "0": 315,
-        "1": 618
-      },
+      "size": [
+        75,
+        26
+      ],
       "flags": {},
-      "order": 15,
+      "order": 10,
       "mode": 0,
       "inputs": [
         {
-          "name": "reference_unet",
-          "type": "UNET2D",
-          "link": 51
-        },
-        {
-          "name": "denoising_unet",
-          "type": "UNET3D",
-          "link": 52
-        },
-        {
-          "name": "ref_image_latent",
-          "type": "LATENT",
-          "link": 53
-        },
-        {
-          "name": "clip_image_embeds",
-          "type": "CLIP_VISION_OUTPUT",
-          "link": 54
-        },
-        {
-          "name": "pose_latent",
-          "type": "POSE_LATENT",
-          "link": 55
+          "name": "",
+          "type": "*",
+          "link": 14
         }
       ],
       "outputs": [
         {
-          "name": "latent",
-          "type": "LATENT",
+          "name": "",
+          "type": "VAE",
           "links": [
-            56
+            15
           ],
-          "shape": 3,
           "slot_index": 0
         }
       ],
       "properties": {
-        "Node name for S&R": "[ComfyUI-3D] Animate Anyone Sampler"
-      },
-      "widgets_values": [
-        999999999,
-        "fixed",
-        20,
-        3.5,
-        1,
-        24,
-        1,
-        4,
-        1,
-        1,
-        "DDIM",
-        0.00085,
-        0.012,
-        "linear",
-        "v_prediction",
-        "trailing",
-        1,
-        false,
-        true,
-        false,
-        "cammy_white_v1.safetensors"
-      ]
+        "showOutputText": false,
+        "horizontal": false
+      }
     },
     {
       "id": 10,
@@ -788,7 +729,7 @@
         "force_size": "Disabled",
         "custom_width": 512,
         "custom_height": 512,
-        "frame_load_cap": 96,
+        "frame_load_cap": 24,
         "skip_first_frames": 0,
         "select_every_nth": 1,
         "choose video to upload": "image",
@@ -796,13 +737,72 @@
           "hidden": false,
           "paused": false,
           "params": {
-            "frame_load_cap": 96,
+            "frame_load_cap": 24,
             "skip_first_frames": 0,
             "force_rate": 0,
             "filename": "anyone-video-2_kps.mp4",
             "type": "input",
             "format": "video/mp4",
             "select_every_nth": 1
+          }
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "VHS_VideoCombine",
+      "pos": [
+        2986,
+        -130
+      ],
+      "size": [
+        315,
+        701.5
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 16
+        },
+        {
+          "name": "audio",
+          "type": "VHS_AUDIO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Filenames",
+          "type": "VHS_FILENAMES",
+          "links": null,
+          "shape": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VHS_VideoCombine"
+      },
+      "widgets_values": {
+        "frame_rate": 12,
+        "loop_count": 0,
+        "filename_prefix": "AnimateAnyone",
+        "format": "video/h265-mp4",
+        "pix_fmt": "yuv420p10le",
+        "crf": 22,
+        "save_metadata": true,
+        "pingpong": false,
+        "save_output": true,
+        "videopreview": {
+          "hidden": false,
+          "paused": false,
+          "params": {
+            "filename": "AnimateAnyone_00001.mp4",
+            "subfolder": "",
+            "type": "output",
+            "format": "video/h265-mp4"
           }
         }
       }
@@ -824,14 +824,6 @@
       5,
       0,
       "CLIP_VISION"
-    ],
-    [
-      5,
-      7,
-      0,
-      8,
-      0,
-      "POSE_GUIDER"
     ],
     [
       14,
@@ -882,14 +874,6 @@
       "IMAGE"
     ],
     [
-      27,
-      23,
-      0,
-      8,
-      1,
-      "IMAGE"
-    ],
-    [
       28,
       10,
       0,
@@ -930,52 +914,68 @@
       "INT"
     ],
     [
-      51,
-      11,
+      57,
+      2,
       0,
-      31,
+      32,
+      2,
+      "LATENT"
+    ],
+    [
+      58,
+      33,
+      0,
+      32,
       0,
       "UNET2D"
     ],
     [
-      52,
-      12,
+      59,
+      34,
       0,
-      31,
+      32,
       1,
       "UNET3D"
     ],
     [
-      53,
-      2,
-      0,
-      31,
-      2,
-      "LATENT"
-    ],
-    [
-      54,
-      5,
-      0,
-      31,
-      3,
-      "CLIP_VISION_OUTPUT"
-    ],
-    [
-      55,
-      8,
-      0,
-      31,
-      4,
-      "POSE_LATENT"
-    ],
-    [
-      56,
-      31,
+      60,
+      32,
       0,
       14,
       0,
       "LATENT"
+    ],
+    [
+      61,
+      35,
+      0,
+      36,
+      0,
+      "POSE_GUIDER"
+    ],
+    [
+      62,
+      23,
+      0,
+      36,
+      1,
+      "IMAGE"
+    ],
+    [
+      63,
+      36,
+      0,
+      32,
+      4,
+      "POSE_LATENT"
+    ],
+    [
+      64,
+      5,
+      0,
+      32,
+      3,
+      "CLIP_VISION_OUTPUT"
     ]
   ],
   "groups": [],

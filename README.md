@@ -57,7 +57,7 @@
     pip install -r requirements.txt
 
     # If you got error regards diffusers then run:
-    pip install --force-reinstall diffusers==0.26.1
+    pip install --force-reinstall diffusers>=0.26.1
     ```
 2. Download pre-trained models:
     - [stable-diffusion-v1-5_unet](https://huggingface.co/runwayml/stable-diffusion-v1-5/tree/main/unet)
