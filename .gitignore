@@ -152,6 +152,7 @@ cython_debug/
 #.idea/
 
 # Model files
+*.ckpt
 *.bin
 *.pth
 *.safetensors

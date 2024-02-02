@@ -19,6 +19,7 @@ from diffusers.schedulers import (
     PNDMScheduler,
 )
 from diffusers.utils.torch_utils import randn_tensor
+from sfast.compilers.diffusion_pipeline_compiler import compile_unet, CompilationConfig
 
 from .mutual_self_attention import ReferenceAttentionControl
 from ..utils.util import get_tensor_interpolation_method, get_context_scheduler
@@ -319,6 +320,26 @@ class AADiffusion(DiffusionPipeline, LoraLoaderMixin):
             return_dict=False,
         )
         reference_control_reader.update(reference_control_writer)
+        
+        config = CompilationConfig.Default()
+        # xformers and Triton are suggested for achieving best performance.
+        try:
+            import xformers
+            config.enable_xformers = True
+        except ImportError:
+            print('xformers not installed, skip')
+        try:
+            import triton
+            config.enable_triton = True
+        except ImportError:
+            print('Triton not installed, skip')
+
+        # CUDA Graph is suggested for small batch sizes and small resolutions to reduce CPU overhead.
+        # But it can increase the amount of GPU memory used.
+        # For StableVideoDiffusionPipeline it is not needed.
+        config.enable_cuda_graph = True
+
+        self.unet = compile_unet(self.unet, config)
         
         # Prepare timesteps
         self.scheduler.set_timesteps(loop_steps, device=device)

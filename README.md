@@ -40,13 +40,13 @@
   - **Result:**  
     Generated result is not good enough when using DDIM Scheduler togather with RCFG, even though it speed up the generating process by about 4X.<br>
     In StreamDiffusion, RCFG works with LCM, could also be the case here, so keep it in another branch for now.
+- [ ] Incorporate the implementation & Pre-trained Models from [Open-AnimateAnyone](https://github.com/guoqincode/Open-AnimateAnyone) & [AnimateAnyone](https://github.com/HumanAIGC/AnimateAnyone) once they released
 - [ ] Convert Model using [stable-fast](https://github.com/chengzeyi/stable-fast) (**Estimated speed up: 2X**)
 - [ ] Train a LCM Lora for denoise unet (**Estimated speed up: 5X**)
-- [ ] Incorporate the implementation & Pre-trained Models from [Open-AnimateAnyone](https://github.com/guoqincode/Open-AnimateAnyone) & [AnimateAnyone](https://github.com/HumanAIGC/AnimateAnyone) once they released
 - [ ] Training a new Model using better dataset to improve results quality (Optional, we'll see if there is any need for me to do it ;)
 - Continuous research, always moving towards something better & faster🚀
 
-## Install (Will add it to ComfyUI Manager Soon!)
+## Install (You can also use ComfyUI Manager)
 
 1.  Clone this repo into the  `Your ComfyUI root directory\ComfyUI\custom_nodes\` and install dependent Python packages:
     ```bash
@@ -55,6 +55,9 @@
     git clone https://github.com/MrForExample/ComfyUI-AnimateAnyone-Evolved.git
 
     pip install -r requirements.txt
+
+    # If you got error regards diffusers then run:
+    pip install --force-reinstall diffusers==0.26.1
     ```
 2. Download pre-trained models:
     - [stable-diffusion-v1-5_unet](https://huggingface.co/runwayml/stable-diffusion-v1-5/tree/main/unet)
